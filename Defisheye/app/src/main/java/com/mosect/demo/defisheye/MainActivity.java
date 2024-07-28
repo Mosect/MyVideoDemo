@@ -16,27 +16,49 @@ import java.io.InputStream;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "Act/Main";
+    private ImageView ivImage;
+    private Bitmap currentImage = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ImageView ivImage = findViewById(R.id.iv_image);
+        ivImage = findViewById(R.id.iv_image);
         findViewById(R.id.btn_load).setOnClickListener(v -> {
             // 载入图片
-            new Thread(() -> {
-                Log.d(TAG, "loadBitmap: ");
-                Bitmap bitmap = loadBitmap();
-                Defisheye.Params params = new Defisheye.Params();
-                Defisheye defisheye = new Defisheye(bitmap, params);
+            Log.d(TAG, "loadBitmap: ");
+            Bitmap bitmap = loadBitmap();
+            Defisheye.Params params = new Defisheye.Params();
+            params.format = Defisheye.Format.fullframe;
+            params.dtype = Defisheye.Dtype.linear;
+            try (Defisheye defisheye = new Defisheye(bitmap, params)) {
                 Log.d(TAG, "convert: ");
-                Bitmap finalBitmap = defisheye.convert();
+                Bitmap result = defisheye.convert();
+                setCurrentImage(result);
+            } finally {
                 bitmap.recycle();
-                Log.d(TAG, "finalBitmap: " + finalBitmap);
-                runOnUiThread(() -> ivImage.setImageBitmap(finalBitmap));
-            }).start();
+            }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ivImage.setImageBitmap(null);
+        if (null != currentImage) {
+            currentImage.recycle();
+            currentImage = null;
+        }
+    }
+
+    private void setCurrentImage(Bitmap currentImage) {
+        Log.d(TAG, "setCurrentImage: " + currentImage);
+        if (null != this.currentImage) {
+            this.currentImage.recycle();
+        }
+        this.currentImage = currentImage;
+        ivImage.setImageBitmap(currentImage);
     }
 
     private Bitmap loadBitmap() {
